@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -27,6 +28,13 @@ fun LedgerApp(vm: LedgerViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
     val nav = rememberNavController()
+    fun navigateTab(route: String) {
+        nav.navigate(route) {
+            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
     val current = nav.currentBackStackEntryAsState().value?.destination?.route ?: "home"
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); vm.message.value = null } }
@@ -36,7 +44,7 @@ fun LedgerApp(vm: LedgerViewModel = viewModel()) {
             bottomBar = {
                 if (current != "confirm") NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     listOf(Triple("home", "首页", R.drawable.ic_nav_home), Triple("bills", "账单", R.drawable.ic_nav_bills), Triple("stats", "统计", R.drawable.ic_nav_stats), Triple("me", "我的", R.drawable.ic_nav_me)).forEach { (route, label, icon) ->
-                        NavigationBarItem(selected = current == route, onClick = { nav.navigate(route) { launchSingleTop = true; popUpTo("home") } }, icon = { Icon(painterResource(icon), contentDescription = null) }, label = { Text(label) })
+                        NavigationBarItem(selected = current == route, onClick = { navigateTab(route) }, icon = { Icon(painterResource(icon), contentDescription = null) }, label = { Text(label) })
                     }
                 }
             }
@@ -45,7 +53,7 @@ fun LedgerApp(vm: LedgerViewModel = viewModel()) {
                 composable("home") { HomeScreen(state, vm, onConfirm = { nav.navigate("confirm") }, onBills = { nav.navigate("bills") }) }
                 composable("confirm") { ConfirmScreen(vm, onBack = { nav.popBackStack() }) }
                 composable("bills") { BillsScreen(state, vm) }
-                composable("stats") { StatsScreen(state, onSelection = { category, range -> vm.billCategory.value = category; vm.billRange.value = range; nav.navigate("bills") }) }
+                composable("stats") { StatsScreen(state, onSelection = { category, range -> vm.billCategory.value = category; vm.billRange.value = range; navigateTab("bills") }) }
                 composable("me") { MeScreen(state, vm) }
             }
         }
